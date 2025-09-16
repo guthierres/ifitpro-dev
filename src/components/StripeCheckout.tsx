@@ -18,12 +18,11 @@ interface SubscriptionPlan {
 interface StripeCheckoutProps {
   plan: SubscriptionPlan;
   trainerId: string;
-  trainerEmail: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-const StripeCheckout = ({ plan, trainerId, trainerEmail, onSuccess, onCancel }: StripeCheckoutProps) => {
+const StripeCheckout = ({ plan, trainerId, onSuccess, onCancel }: StripeCheckoutProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -53,12 +52,19 @@ const StripeCheckout = ({ plan, trainerId, trainerEmail, onSuccess, onCancel }: 
         const endDate = new Date();
         endDate.setDate(endDate.getDate() + 30);
 
+        // First cancel any existing active subscriptions
+        await supabase
+          .from("subscriptions")
+          .update({ status: 'canceled' })
+          .eq("personal_trainer_id", trainerId)
+          .eq("status", "active");
+
         const { error } = await supabase
           .from("subscriptions")
           .insert({
             personal_trainer_id: trainerId,
             subscription_plan_id: plan.id,
-            status: 'trialing',
+            status: 'active',
             current_period_start: new Date().toISOString(),
             current_period_end: endDate.toISOString(),
             students_count: 0
@@ -67,34 +73,28 @@ const StripeCheckout = ({ plan, trainerId, trainerEmail, onSuccess, onCancel }: 
         if (error) throw error;
 
         toast({
-          title: "Teste ativado!",
-          description: "Seu período de teste de 30 dias foi ativado com sucesso.",
+          title: "Plano ativado!",
+          description: "Seu plano foi ativado com sucesso por 30 dias.",
         });
 
         onSuccess();
         return;
       }
 
-      // Para planos pagos, aqui você implementaria a integração real com Stripe
+      // Para planos pagos, mostrar mensagem para contatar administrador
       toast({
-        title: "Redirecionando para pagamento",
-        description: "Você será redirecionado para o checkout seguro do Stripe.",
+        title: "Contate o administrador",
+        description: "Para planos pagos, entre em contato com o administrador do sistema.",
+        variant: "default",
       });
 
-      // Simular redirecionamento para Stripe Checkout
-      setTimeout(() => {
-        toast({
-          title: "Pagamento processado",
-          description: "Assinatura ativada com sucesso! (Simulação)",
-        });
-        onSuccess();
-      }, 3000);
+      onCancel();
 
     } catch (error) {
       console.error("Error processing checkout:", error);
       toast({
         title: "Erro",
-        description: "Erro ao processar pagamento. Tente novamente.",
+        description: "Erro ao ativar plano. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -162,9 +162,9 @@ const StripeCheckout = ({ plan, trainerId, trainerEmail, onSuccess, onCancel }: 
                 Processando...
               </>
             ) : plan.billing_period === 'trial' ? (
-              "Iniciar Teste Gratuito"
+              "Ativar Plano Gratuito"
             ) : (
-              `Assinar por ${formatPrice(plan.price_cents)}`
+              "Contatar Administrador"
             )}
           </Button>
           

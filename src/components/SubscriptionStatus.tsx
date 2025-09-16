@@ -4,14 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
-import { 
-  CreditCard, 
-  Users, 
-  Calendar, 
+import {
+  CreditCard,
+  Users,
+  Calendar,
   AlertTriangle,
   CheckCircle,
   Crown,
-  Zap
+  Zap,
+  Settings
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -111,6 +112,10 @@ const SubscriptionStatus = ({ trainerId }: SubscriptionStatusProps) => {
     return getDaysUntilExpiry() <= 7;
   };
 
+  const isPro = () => {
+    return subscription && subscription.subscription_plan.billing_period !== 'trial';
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -175,8 +180,8 @@ const SubscriptionStatus = ({ trainerId }: SubscriptionStatusProps) => {
               {subscription.students_count} / {subscription.subscription_plan.student_limit}
             </span>
           </div>
-          <Progress 
-            value={getUsagePercentage()} 
+          <Progress
+            value={getUsagePercentage()}
             className={`h-2 ${isNearLimit() ? 'bg-warning/20' : ''}`}
           />
           {isNearLimit() && (
